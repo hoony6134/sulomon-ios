@@ -25,7 +25,7 @@ struct HistoryView: View {
                     ContentUnavailableView(
                         "기록된 내역이 없습니다",
                         systemImage: "wineglass",
-                        description: Text("우측 상단의 + 버튼이나 기록 탭에서\n첫 번째 음주 기록을 남겨보세요.")
+                        description: Text("'추가' 탭에서 첫 번째 음주 기록을 남겨보세요.")
                     )
                 } else {
                     // MARK: - List로 변경하여 스와이프 삭제 지원
