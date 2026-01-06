@@ -12,7 +12,8 @@ import SwiftData
 struct sulomonApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Person.self,
+            DrinkRecord.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -21,6 +22,7 @@ struct sulomonApp: App {
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
+        
     }()
 
     var body: some Scene {

@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		E930E9DA2F0D441C0058A3C4 /* VoidUtilities in Frameworks */ = {isa = PBXBuildFile; productRef = E930E9D92F0D441C0058A3C4 /* VoidUtilities */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		E9D307B62F0CFDEA0047CF85 /* sulomon.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = sulomon.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E930E9DA2F0D441C0058A3C4 /* VoidUtilities in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +83,7 @@
 			);
 			name = sulomon;
 			packageProductDependencies = (
+				E930E9D92F0D441C0058A3C4 /* VoidUtilities */,
 			);
 			productName = sulomon;
 			productReference = E9D307B62F0CFDEA0047CF85 /* sulomon.app */;
@@ -107,6 +113,9 @@
 			);
 			mainGroup = E9D307AD2F0CFDEA0047CF85;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E930E9D82F0D441C0058A3C4 /* XCRemoteSwiftPackageReference "VoidUtilities" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E9D307B72F0CFDEA0047CF85 /* Products */;
 			projectDirPath = "";
@@ -150,6 +159,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = sulomon/Info.plist;
+				INFOPLIST_KEY_NSHealthClinicalHealthRecordsShareUsageDescription = "알코올 섭취 기록의 조회를 위해 권한이 필요합니다.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "알코올 섭취 기록의 조회 및 기록을 위해 권한이 필요합니다.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "알코올 섭취 기록을 위해 권한이 필요합니다.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -184,6 +196,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = sulomon/Info.plist;
+				INFOPLIST_KEY_NSHealthClinicalHealthRecordsShareUsageDescription = "알코올 섭취 기록의 조회를 위해 권한이 필요합니다.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "알코올 섭취 기록의 조회 및 기록을 위해 권한이 필요합니다.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "알코올 섭취 기록을 위해 권한이 필요합니다.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -349,6 +364,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E930E9D82F0D441C0058A3C4 /* XCRemoteSwiftPackageReference "VoidUtilities" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/studio-void/VoidUtilities";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E930E9D92F0D441C0058A3C4 /* VoidUtilities */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E930E9D82F0D441C0058A3C4 /* XCRemoteSwiftPackageReference "VoidUtilities" */;
+			productName = VoidUtilities;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E9D307AE2F0CFDEA0047CF85 /* Project object */;
 }
