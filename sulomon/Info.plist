@@ -4,7 +4,7 @@
 <dict>
 	<key>UIBackgroundModes</key>
 	<array>
-		<string>푸시 알림에 대응하여 백그라운드에서 컨텐츠를 다운로드합니다.</string>
+		<string>remote-notification</string>
 		<string>remote-notification</string>
 	</array>
 </dict>
