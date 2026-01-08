@@ -159,6 +159,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = sulomon/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "술로몬";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "음주 기록의 보호를 위해 Face ID 권한이 필요합니다.";
 				INFOPLIST_KEY_NSHealthClinicalHealthRecordsShareUsageDescription = "알코올 섭취 기록의 조회를 위해 권한이 필요합니다.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "알코올 섭취 기록의 조회 및 기록을 위해 권한이 필요합니다.";
@@ -197,6 +199,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = sulomon/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "술로몬";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "음주 기록의 보호를 위해 Face ID 권한이 필요합니다.";
 				INFOPLIST_KEY_NSHealthClinicalHealthRecordsShareUsageDescription = "알코올 섭취 기록의 조회를 위해 권한이 필요합니다.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "알코올 섭취 기록의 조회 및 기록을 위해 권한이 필요합니다.";
