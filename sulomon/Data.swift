@@ -13,6 +13,10 @@ final class Person: Identifiable {
     var id: UUID?
     var name: String?
     
+    // N:M 관계 설정
+    @Relationship(inverse: \DrinkRecord.people)
+    var drinks: [DrinkRecord]? = []
+    
     init(id: UUID? = UUID(), name: String? = "알 수 없음") {
         self.id = id
         self.name = name
@@ -32,29 +36,66 @@ enum AlcoholType: String, Codable, CaseIterable {
     static var allCases: [AlcoholType] = [.soju, .beer, .somac, .wine, .fruitSoju, .liquor, .highball, .etc]
 }
 
+// MARK: - 취기 레벨 Enum 추가
+enum IntoxicationFeeling: Int, Codable, CaseIterable {
+    case fine = 1      // 완전 멀쩡
+    case light = 2     // 약간 취함
+    case moderate = 3  // 적당히 취함
+    case heavy = 4     // 꽤 취함
+    case wasted = 5    // 꽐라
+    
+    var emoji: String {
+        switch self {
+        case .fine: return "😃"
+        case .light: return "☺️"
+        case .moderate: return "🥴"
+        case .heavy: return "😵‍💫"
+        case .wasted: return "🧟"
+        }
+    }
+    
+    var label: String {
+        switch self {
+        case .fine: return "완전 멀쩡"
+        case .light: return "약간 취함"
+        case .moderate: return "적당히 취함"
+        case .heavy: return "꽤 취함"
+        case .wasted: return "꽐라"
+        }
+    }
+}
+
 @Model
 final class DrinkRecord: Identifiable {
     var id: UUID?
     var type: AlcoholType?
 
+    // 관계 설정
+    @Relationship
+    var people: [Person]? = []
+
     // 공통 메타데이터
     var timestamp: Date?
-    var alcoholPercent: Double?      // 도수 (%)
+    var alcoholPercent: Double?
     var units: Double?
 
     // 섭취 단위 기준
-    var alcoholPerUnit: Double?  // 잔당 순수 알코올 양 (mL)
-    var unitML: Double?        // 한 잔 기준 용량 (mL)
+    var alcoholPerUnit: Double?
+    var unitML: Double?
     var unitName: String?
 
     // 선택 메타데이터
     var brand: String?
     var memo: String?
     var healthKitSynced: Bool? = false
+    
+    // 추가된 취기 데이터
+    var feeling: IntoxicationFeeling?
 
     init(
         id: UUID? = UUID(),
         type: AlcoholType? = AlcoholType.etc,
+        people: [Person]? = [],
         timestamp: Date = .now,
         alcoholPercent: Double?,
         units: Double?,
@@ -63,10 +104,12 @@ final class DrinkRecord: Identifiable {
         alcoholPerUnit: Double?,
         brand: String? = nil,
         memo: String? = nil,
-        healthKitSynced: Bool? = false
+        healthKitSynced: Bool? = false,
+        feeling: IntoxicationFeeling? = nil // Init 추가
     ) {
         self.id = id
         self.type = type
+        self.people = people
         self.timestamp = timestamp
         self.alcoholPercent = alcoholPercent
         self.units = units
@@ -76,5 +119,6 @@ final class DrinkRecord: Identifiable {
         self.brand = brand
         self.memo = memo
         self.healthKitSynced = healthKitSynced
+        self.feeling = feeling
     }
 }

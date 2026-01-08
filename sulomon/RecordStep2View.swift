@@ -7,13 +7,22 @@
 
 import SwiftUI
 import SwiftData
-// import VoidUtilities // 필요한 경우 주석 해제
 
 struct RecordStep2View: View {
     @AppStorage("historyBadge") var historyBadge: Bool = false
+    
     // MARK: - SwiftData Environment
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss // 저장 후 창 닫기용
+    @Environment(\.dismiss) private var dismiss
+
+    // 모든 사람 데이터 가져오기
+    @Query private var allPeople: [Person]
+    
+    // 선택된 사람 관리
+    @State private var selectedPeople: Set<Person> = []
+    
+    // 선택된 기분 관리
+    @State private var selectedFeeling: IntoxicationFeeling? = nil
 
     // MARK: - External Data / Bindings
     @State var type: AlcoholType
@@ -25,8 +34,12 @@ struct RecordStep2View: View {
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12)
     ]
+    
+    private let adaptiveColumns = [
+        GridItem(.adaptive(minimum: 100), spacing: 10)
+    ]
 
-    // MARK: - Preset Models
+    // MARK: - Preset Models (AlcoholPreset, UnitPreset) - 생략 없이 포함
     private struct AlcoholPreset: Identifiable, Hashable {
         let id = UUID()
         let title: String
@@ -123,22 +136,19 @@ struct RecordStep2View: View {
         }
     }
 
-    // MARK: - State Properties (Step 1)
+    // MARK: - State Properties
     @State private var selectedPresetTitle: String? = nil
     @State private var manualBrandText: String = ""
 
-    // MARK: - State Properties (Step 2)
-    @State private var unitCount: Double = 0.0 // 사용자 입력 개수
+    @State private var unitCount: Double = 0.0
     @State private var unitName: String = ""
     @State private var unitML: Double = 0.0
     
-    // UI Logic States
     @State private var selectedUnitTitle: String? = nil
     @State private var isUnitMLExpanded: Bool = false
     @State private var manualUnitNameText: String = ""
     @State private var manualUnitMLText: String = ""
     
-    // Saving State
     @State private var isSaving: Bool = false
     @State private var showSaveAlert: Bool = false
 
@@ -153,6 +163,10 @@ struct RecordStep2View: View {
     }
 
     private var shouldShowStep2: Bool { isStep1Ready }
+    
+    private var shouldShowStep3: Bool {
+        shouldShowStep2 && unitCount > 0
+    }
 
     private var totalPureAlcohol: Double {
         let percent = (alcoholPercent == 0 && defaultPercent != 0) ? defaultPercent : alcoholPercent
@@ -184,6 +198,10 @@ struct RecordStep2View: View {
     private var needsManualBrandWhenPreset: Bool {
         guard let selectedPresetTitle else { return false }
         return selectedPresetTitle == "기타"
+    }
+    
+    private var sortedPeople: [Person] {
+        allPeople.sorted { ($0.drinks?.count ?? 0) > ($1.drinks?.count ?? 0) }
     }
 
     // MARK: - Helpers
@@ -233,11 +251,11 @@ struct RecordStep2View: View {
     private func saveData() {
         isSaving = true
         
-        // 1. SwiftData 저장
         let percentToSave = (alcoholPercent == 0 && defaultPercent != 0) ? defaultPercent : alcoholPercent
         
         let newRecord = DrinkRecord(
             type: type,
+            people: Array(selectedPeople),
             timestamp: Date(),
             alcoholPercent: percentToSave,
             units: unitCount,
@@ -245,32 +263,25 @@ struct RecordStep2View: View {
             unitName: unitName,
             alcoholPerUnit: alcoholPerUnit,
             brand: brand,
-            healthKitSynced: false
+            healthKitSynced: false,
+            feeling: selectedFeeling // 저장!
         )
         
         modelContext.insert(newRecord)
         
-        // 2. HealthKit 저장 시도
         Task {
-            // 사용자 입력값이 0보다 클 때만 HealthKit 저장 시도
             if unitCount > 0 {
                 do {
-                    // 권한 확인 및 요청
                     let authorized = try await HealthKitManager.shared.requestAuthorization()
                     if authorized {
-                        // 저장
                         try await HealthKitManager.shared.saveAlcoholUnits(units: unitCount, date: newRecord.timestamp ?? Date())
-                        
-                        // 성공 시 플래그 업데이트 (메인 스레드에서 UI 관련 데이터 업데이트 권장이나 SwiftData Actor 모델상 Task 내부 수행 가능)
                         newRecord.healthKitSynced = true
                     }
                 } catch {
                     print("HealthKit Error: \(error)")
-                    // 실패해도 SwiftData에는 저장되었으므로 진행
                 }
             }
             
-            // 3. 완료 처리
             await MainActor.run {
                 isSaving = false
                 showSaveAlert = true
@@ -296,7 +307,7 @@ struct RecordStep2View: View {
                                 .foregroundStyle(.secondary)
                         }
 
-                        // Presets
+                        // Presets Grid
                         if let presets {
                             LazyVGrid(columns: twoColumns, spacing: 12) {
                                 ForEach(presets) { preset in
@@ -311,7 +322,6 @@ struct RecordStep2View: View {
                                     .buttonStyle(.plain)
                                 }
                             }
-                            // Manual Brand
                             if needsManualBrandWhenPreset {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("브랜드 (선택)")
@@ -328,7 +338,6 @@ struct RecordStep2View: View {
                                 }
                             }
                         } else {
-                            // Direct Input
                             if needsManualBrand {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text(type == .highball || type == .etc ? "종류" : "브랜드")
@@ -346,7 +355,7 @@ struct RecordStep2View: View {
                             }
                         }
 
-                        // Percent Input
+                        // Percent
                         VStack(alignment: .leading, spacing: 8) {
                             Text("도수")
                                 .font(.caption).foregroundStyle(.secondary)
@@ -390,9 +399,9 @@ struct RecordStep2View: View {
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                             }
-                            .id("Step2Header") // ScrollViewReader 타겟 ID
+                            .id("Step2Header")
 
-                            // 1. 음주량 입력 (Count)
+                            // 1. 음주량 + 0.5 Button
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("음주량 (개수)")
                                     .font(.caption).foregroundStyle(.secondary)
@@ -413,7 +422,23 @@ struct RecordStep2View: View {
                                         .textInputAutocapitalization(.never)
                                         .autocorrectionDisabled()
                                         
-                                        Spacer(minLength: 0)
+                                        // +0.5 Button
+                                        Button {
+                                            unitCount += 0.5
+                                        } label: {
+                                            Text("+0.5")
+                                                .font(.caption)
+                                                .fontWeight(.bold)
+                                                .foregroundStyle(.white)
+                                                .padding(.horizontal, 10)
+                                                .padding(.vertical, 6)
+                                                .background(Color.blue)
+                                                .cornerRadius(20)
+                                        }
+                                        .buttonStyle(.plain)
+                                        
+                                        Spacer(minLength: 4)
+                                        
                                         Text(unitName.isEmpty ? "단위" : unitName)
                                             .font(.subheadline).fontWeight(.semibold).foregroundStyle(.secondary)
                                     }
@@ -461,7 +486,6 @@ struct RecordStep2View: View {
 
                                 if isUnitMLExpanded {
                                     VStack(alignment: .leading, spacing: 16) {
-                                        // Unit Name
                                         VStack(alignment: .leading, spacing: 6) {
                                             Text("단위명").font(.caption2).foregroundStyle(.secondary)
                                             fieldContainer {
@@ -472,7 +496,6 @@ struct RecordStep2View: View {
                                                     }
                                             }
                                         }
-                                        // Unit ML
                                         VStack(alignment: .leading, spacing: 6) {
                                             Text("1단위 용량 (mL)").font(.caption2).foregroundStyle(.secondary)
                                             fieldContainer {
@@ -487,7 +510,6 @@ struct RecordStep2View: View {
                                                 }
                                             }
                                         }
-                                        // Calculation Preview
                                         VStack(spacing: 8) {
                                             HStack {
                                                 Text("단위당 알코올").font(.caption).foregroundStyle(.secondary)
@@ -511,19 +533,145 @@ struct RecordStep2View: View {
                         }
                     } // End Step 2
                     
-                    Spacer(minLength: 60) // 저장 버튼 공간 확보
+                    // MARK: - Step 3 (People & Feeling)
+                    if shouldShowStep3 {
+                        VStack(spacing: 24) {
+                            Divider()
+                            
+                            // 1. 함께한 사람
+                            VStack(spacing: 16) {
+                                HStack {
+                                    Text("Step 3")
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                    Spacer()
+                                    Text("함께한 사람 (선택)")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .id("Step3Header")
+                                
+                                if sortedPeople.isEmpty {
+                                    Text("등록된 사람이 없습니다.\n'사람 관리' 탭에서 친구를 추가해보세요.")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .multilineTextAlignment(.center)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color.secondary.opacity(0.1))
+                                        .cornerRadius(12)
+                                } else {
+                                    LazyVGrid(columns: adaptiveColumns, spacing: 10) {
+                                        ForEach(sortedPeople) { person in
+                                            let isSelected = selectedPeople.contains(person)
+                                            Button {
+                                                if isSelected {
+                                                    selectedPeople.remove(person)
+                                                } else {
+                                                    selectedPeople.insert(person)
+                                                }
+                                            } label: {
+                                                HStack {
+                                                    Text(person.name ?? "이름 없음")
+                                                        .font(.subheadline)
+                                                        .fontWeight(isSelected ? .semibold : .regular)
+                                                    
+                                                    if isSelected {
+                                                        Spacer()
+                                                        Image(systemName: "checkmark")
+                                                            .font(.caption)
+                                                    }
+                                                }
+                                                .padding(.horizontal, 12)
+                                                .padding(.vertical, 10)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                                        .fill(isSelected ? Color.blue.opacity(0.15) : Color.secondary.opacity(0.1))
+                                                )
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                                        .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 1.5)
+                                                )
+                                                .foregroundColor(isSelected ? .blue : .primary)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            Divider()
+                            
+                            // 2. 취기 선택 (Step 4)
+                            VStack(spacing: 16) {
+                                HStack {
+                                    Text("취기 선택")
+                                        .font(.headline)
+                                        .fontWeight(.semibold)
+                                    Spacer()
+                                    if let feeling = selectedFeeling {
+                                        Text(feeling.label)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.blue)
+                                            .fontWeight(.bold)
+                                            .transition(.opacity)
+                                    }
+                                }
+                                
+                                HStack(spacing: 0) {
+                                    ForEach(IntoxicationFeeling.allCases, id: \.self) { feeling in
+                                        let isSelected = selectedFeeling == feeling
+                                        Button {
+                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                                if selectedFeeling == feeling {
+                                                    selectedFeeling = nil // 토글 (선택 해제)
+                                                } else {
+                                                    selectedFeeling = feeling
+                                                }
+                                            }
+                                        } label: {
+                                            VStack(spacing: 6) {
+                                                Text(feeling.emoji)
+                                                    .font(.system(size: isSelected ? 38 : 30))
+                                                    .scaleEffect(isSelected ? 1.1 : 1.0)
+                                                
+                                                // 선택된 경우 라벨 표시 (옵션)
+                                                // 공간이 좁으면 이모지만 크게 보여주고 상단 텍스트로 대체
+                                            }
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 70)
+                                            .background(
+                                                Circle()
+                                                    .fill(isSelected ? Color.blue.opacity(0.1) : Color.clear)
+                                            )
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(.vertical, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(Color.secondary.opacity(0.08))
+                                )
+                            }
+                        }
+                        .transition(.opacity)
+                    }
+
+                    Spacer(minLength: 60)
                 }
                 .padding(.horizontal)
             }
             .onChange(of: shouldShowStep2) { _, ready in
                 if ready {
-                    // Defaults setup
                     if alcoholPercent == 0, defaultPercent != 0 { alcoholPercent = defaultPercent }
                     if type == .somac { brand = nil }
                     if selectedUnitTitle == nil { initializeStep2Defaults() }
                     
-                    // 1. Scroll to Step 2 Header with Animation
-                    // 0.1초 딜레이는 UI가 렌더링된 후 스크롤하기 위함
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         withAnimation {
                             proxy.scrollTo("Step2Header", anchor: .top)
@@ -531,7 +679,15 @@ struct RecordStep2View: View {
                     }
                 }
             }
-            // 저장 버튼 Overlay
+            .onChange(of: shouldShowStep3) { _, ready in
+                if ready {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation {
+                            proxy.scrollTo("Step3Header", anchor: .bottom)
+                        }
+                    }
+                }
+            }
             .overlay(alignment: .bottom) {
                 if shouldShowStep2 {
                     Button(action: saveData) {
@@ -552,10 +708,10 @@ struct RecordStep2View: View {
                     }
                     .disabled(unitCount <= 0 || isSaving)
                     .padding()
-                    .background(
-                        LinearGradient(colors: [.white.opacity(0), .white], startPoint: .top, endPoint: .bottom)
-                            .padding(.top, -20)
-                    )
+//                    .background(
+//                        LinearGradient(colors: [.white.opacity(0), .white], startPoint: .top, endPoint: .bottom)
+//                            .padding(.top, -20)
+//                    )
                 }
             }
         }
@@ -595,4 +751,5 @@ struct RecordStep2View: View {
 
 #Preview {
     RecordStep2View(type: AlcoholType.soju)
+        .modelContainer(for: [Person.self, DrinkRecord.self], inMemory: true)
 }
